@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "MealBridge",
+    "slug": "mealbridge",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,6 +24,10 @@
       "expo-router",
       "expo-status-bar",
       "expo-sqlite"
-    ]
+    ],
+    "scheme": "mealbridge",
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
