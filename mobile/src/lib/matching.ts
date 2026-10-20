@@ -136,7 +136,7 @@ export function rankOffers<T extends MatchOffer>(
   org: MatchOrg,
   now: Date = new Date(),
   config: MatchConfig = DEFAULT_CONFIG,
-): Array<{ offer: T; match: MatchResult }> {
+): { offer: T; match: MatchResult }[] {
   return offers
     .map((offer) => ({ offer, match: evaluateOffer(offer, org, now, config) }))
     .filter(({ match }) => match.feasible)
