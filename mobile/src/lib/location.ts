@@ -29,3 +29,19 @@ export async function getCurrentCoords(): Promise<Coords> {
 
   return { lat: latitude, lng: longitude, address };
 }
+
+/** Looks up coordinates for a typed address (used when the donor does not share GPS). */
+export async function geocodeAddress(address: string): Promise<Coords> {
+  // Android requires location permission before geocoding; iOS ignores it.
+  await Location.requestForegroundPermissionsAsync();
+  let point: Location.LocationGeocodedLocation | undefined;
+  try {
+    [point] = await Location.geocodeAsync(address);
+  } catch {
+    point = undefined;
+  }
+  if (!point) {
+    throw new Error('Could not find that address. Add a landmark or tap "Use my current location".');
+  }
+  return { lat: point.latitude, lng: point.longitude, address };
+}

@@ -7,7 +7,7 @@ import { Body, Button, Chip, ErrorText, Field, Screen, Title } from '@/component
 import { createDonation } from '@/lib/api';
 import { useProfile } from '@/lib/auth';
 import { minutesFromNow } from '@/lib/format';
-import { getCurrentCoords, type Coords } from '@/lib/location';
+import { geocodeAddress, getCurrentCoords, type Coords } from '@/lib/location';
 
 const PREPARED_OPTIONS = [
   { label: 'Just now', minutesAgo: 0 },
@@ -67,11 +67,15 @@ export default function NewDonation() {
     const qty = Number(quantity);
     if (!title.trim()) return setError('Give the food a short title.');
     if (!Number.isInteger(qty) || qty <= 0) return setError('Quantity must be a whole number of servings.');
-    if (!place) return setError('Set the pickup location first.');
+    if (!place && !address.trim()) {
+      return setError('Enter a pickup address or tap "Use my current location".');
+    }
 
     setBusy(true);
     setError(null);
     try {
+      // Prefer shared GPS; otherwise look up the typed address.
+      const where = place ?? (await geocodeAddress(address.trim()));
       await createDonation(
         profile.id,
         {
@@ -81,8 +85,8 @@ export default function NewDonation() {
           prepared_at: minutesFromNow(-minutesAgo),
           pickup_deadline: minutesFromNow(deadlineMinutes),
           address: address.trim() || null,
-          lat: place.lat,
-          lng: place.lng,
+          lat: where.lat,
+          lng: where.lng,
         },
         photoUri,
       );
@@ -123,7 +127,9 @@ export default function NewDonation() {
 
           <Field label="Pickup address / instructions" value={address} onChangeText={setAddress} />
           <Body muted>
-            {place ? `Location set (${place.lat.toFixed(4)}, ${place.lng.toFixed(4)})` : 'No location set yet'}
+            {place
+              ? `GPS location set (${place.lat.toFixed(4)}, ${place.lng.toFixed(4)})`
+              : 'No GPS location. The address above will be looked up when you post.'}
           </Body>
           <Button label="Use my current location" variant="secondary" onPress={locate} loading={locating} />
 
