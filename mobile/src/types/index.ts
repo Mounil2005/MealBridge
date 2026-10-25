@@ -1,4 +1,7 @@
-export type Role = 'donor' | 'org';
+export type Role = 'donor' | 'org' | 'admin';
+
+/** Roles a person can pick at signup. Admins are promoted in the database, never self-created. */
+export type SignupRole = Exclude<Role, 'admin'>;
 
 export type DonationStatus = 'available' | 'claimed' | 'picked_up' | 'expired' | 'cancelled';
 
@@ -13,6 +16,7 @@ export interface Profile {
   capacity: number;
   max_radius_km: number;
   is_verified: boolean;
+  created_at: string;
 }
 
 export interface Donation {
@@ -44,3 +48,16 @@ export type NewDonation = Pick<
   Donation,
   'title' | 'description' | 'quantity' | 'prepared_at' | 'pickup_deadline' | 'address' | 'lat' | 'lng'
 >;
+
+export interface AdminStats {
+  donors: number;
+  orgs: number;
+  orgs_verified: number;
+  orgs_pending: number;
+  donations: number;
+  by_status: Partial<Record<DonationStatus, number>>;
+  servings_listed: number;
+  servings_rescued: number;
+}
+
+export type DonationWithDonor = Donation & { donor: { name: string } | null };

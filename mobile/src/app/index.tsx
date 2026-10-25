@@ -6,5 +6,5 @@ import { useAuth } from '@/lib/auth';
 export default function Index() {
   const { session, profile } = useAuth();
   if (!session || !profile) return <Redirect href="/login" />;
-  return <Redirect href={profile.role === 'org' ? '/org' : '/donor'} />;
+  return <Redirect href={profile.role === 'admin' ? '/admin' : profile.role === 'org' ? '/org' : '/donor'} />;
 }

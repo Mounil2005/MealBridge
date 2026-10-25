@@ -42,11 +42,19 @@ Distance uses the Haversine formula. All constants live in `DEFAULT_CONFIG`.
 | Device | `expo-location`, `expo-image-picker` |
 | Tests | Jest (`jest-expo`) |
 
+## Roles
+
+| Role | Can do |
+|---|---|
+| Donor | Post, edit-by-cancel and track donations |
+| Organization | See ranked offers, claim, collect (only after admin approval) |
+| Admin | Dashboard of platform-wide numbers, approve or revoke organizations, browse every donation. Read-only otherwise |
+
 ## Security model
 
 All rules are enforced in the database, not the app (see [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)):
 
-- Row level security on every table.
+- Row level security on every table. Admin power is a database role (`is_admin()`), not an app flag.
 - `role` and `is_verified` cannot be changed by the user (column-level grants). Verification is an admin action.
 - Claim, pick-up, release, cancel and expiry are Postgres functions that lock the row and validate state, so transitions are atomic and tamper-proof.
 - Contact details are visible only between the two parties of an active claim.
@@ -56,7 +64,7 @@ All rules are enforced in the database, not the app (see [`supabase/migrations/0
 
 **Prerequisites:** Node 20+ and a free [Supabase](https://supabase.com) project. Install the Expo Go app on your phone.
 
-1. **Database.** In the Supabase dashboard open *SQL Editor*, then run each file in `supabase/migrations/` in order (`0001_init.sql`, then `0002_profile_address.sql`).
+1. **Database.** In the Supabase dashboard open *SQL Editor*, then run each file in `supabase/migrations/` in order (`0001_init.sql`, then `0002_profile_address.sql`, then `0003_admin.sql`).
 2. **Auth settings (development).** *Authentication -> Providers -> Email*: turn off "Confirm email" so signup logs you straight in.
 3. **Configure the app.**
    ```bash
@@ -66,14 +74,17 @@ All rules are enforced in the database, not the app (see [`supabase/migrations/0
    npx expo start
    ```
    Scan the QR code with Expo Go.
-4. **Verify an organization.** New organizations start unverified. In the SQL Editor:
+4. **Create an admin.** Admins cannot be created through signup. Sign up normally, then promote that account once in the SQL Editor:
    ```sql
-   update public.profiles set is_verified = true where name = 'Your Org Name';
+   update public.profiles set role = 'admin'
+   where id = (select id from auth.users where email = 'you@example.com');
    ```
+   Sign out and back in. The admin area opens automatically.
+5. **Approve organizations.** New organizations start unverified. Approve them from the admin app (*Organizations* tab).
 
 ### Trying it end to end
 
-Use two accounts (two phones, or sign out and back in): create a **Donor** and post food, then create an **Organization**, verify it with the SQL above, set its location in *Profile*, and the offer appears in *Nearby offers*. Claim it and watch the donor's screen update live.
+Use two accounts (two phones, or sign out and back in): create a **Donor** and post food, then create an **Organization**, approve it from the admin account (Organizations tab), set its location in *Profile*, and the offer appears in *Nearby offers*. Claim it and watch the donor's screen update live.
 
 ## Scripts
 
@@ -102,6 +113,5 @@ supabase/
 
 - Map view of offers
 - Push notifications for new nearby offers and status changes
-- Admin screen for organization verification
 - Scheduled expiry job (`pg_cron`) in addition to expire-on-load
 - PostGIS for server-side radius queries at larger scale

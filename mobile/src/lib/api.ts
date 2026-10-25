@@ -1,5 +1,13 @@
 import { supabase } from './supabase';
-import type { Claim, Donation, NewDonation, Profile, Role } from '@/types';
+import type {
+  AdminStats,
+  Claim,
+  Donation,
+  DonationWithDonor,
+  NewDonation,
+  Profile,
+  SignupRole,
+} from '@/types';
 
 /** Unwraps a Supabase response, throwing a readable Error instead of returning { error }. */
 function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
@@ -18,7 +26,7 @@ export async function signUp(input: {
   email: string;
   password: string;
   name: string;
-  role: Role;
+  role: SignupRole;
   place?: { address: string; lat: number; lng: number };
 }) {
   const { data, error } = await supabase.auth.signUp({
@@ -159,4 +167,36 @@ export async function getActiveClaim(donationId: string): Promise<Claim | null> 
 /** Marks overdue donations as expired. Cheap and idempotent, so the app calls it on load. */
 export async function expireOverdue(): Promise<void> {
   check(await supabase.rpc('expire_overdue_donations'));
+}
+
+// ---- admin ----------------------------------------------------------------
+
+export async function getAdminStats(): Promise<AdminStats> {
+  return unwrap(await supabase.rpc('admin_stats')) as AdminStats;
+}
+
+/** Organizations awaiting approval come first, then the newest. */
+export async function listOrganizations(): Promise<Profile[]> {
+  return unwrap(
+    await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'org')
+      .order('is_verified', { ascending: true })
+      .order('created_at', { ascending: false }),
+  );
+}
+
+export async function setOrgVerified(orgId: string, verified: boolean): Promise<void> {
+  check(await supabase.rpc('set_org_verified', { p_org_id: orgId, p_verified: verified }));
+}
+
+export async function listAllDonations(): Promise<DonationWithDonor[]> {
+  return unwrap(
+    await supabase
+      .from('donations')
+      .select('*, donor:profiles!donor_id(name)')
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ) as DonationWithDonor[];
 }

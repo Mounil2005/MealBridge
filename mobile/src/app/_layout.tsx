@@ -6,6 +6,9 @@ import { Body, Button, Empty, Loading, Screen } from '@/components/ui';
 import { signOut } from '@/lib/api';
 import { AuthProvider, useAuth } from '@/lib/auth';
 
+// Shows a retry screen instead of a blank crash if any screen throws while rendering.
+export { ErrorBoundary } from 'expo-router';
+
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
 
@@ -24,6 +27,7 @@ function RootNavigator() {
 
   const isDonor = profile?.role === 'donor';
   const isOrg = profile?.role === 'org';
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -36,6 +40,9 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={isOrg}>
         <Stack.Screen name="org" />
+      </Stack.Protected>
+      <Stack.Protected guard={isAdmin}>
+        <Stack.Screen name="admin" />
       </Stack.Protected>
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="donation/[id]" options={{ headerShown: true, title: 'Donation' }} />

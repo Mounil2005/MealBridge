@@ -18,6 +18,7 @@ import {
 import { useProfile } from '@/lib/auth';
 import { formatDateTime, formatTimeLeft } from '@/lib/format';
 import { effectiveDeadline } from '@/lib/matching';
+import type { Profile } from '@/types';
 
 export default function DonationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,10 +30,20 @@ export default function DonationDetail() {
   const { data, error, loading, reload } = useLoad(async () => {
     const donation = await getDonation(id);
     const claim = await getActiveClaim(id);
-    // The other party's profile is readable only while a claim is active (enforced by RLS).
-    const counterpartId = me.role === 'donor' ? claim?.org_id : donation.donor_id;
-    const counterpart = counterpartId && claim ? await getProfile(counterpartId).catch(() => null) : null;
-    return { donation, claim, counterpart };
+    // Donors and organizations may read the other party's profile only while a claim is active
+    // (enforced by RLS). Admins may read both parties at any time.
+    const fetchProfile = (profileId: string) => getProfile(profileId).catch(() => null);
+    const people: { label: string; profile: Profile }[] = [];
+    if (me.role === 'donor') {
+      const org = claim && (await fetchProfile(claim.org_id));
+      if (org) people.push({ label: 'Claimed by', profile: org });
+    } else {
+      const donor = (claim || me.role === 'admin') && (await fetchProfile(donation.donor_id));
+      if (donor) people.push({ label: 'Donor', profile: donor });
+      const org = me.role === 'admin' && claim && (await fetchProfile(claim.org_id));
+      if (org) people.push({ label: 'Claimed by', profile: org });
+    }
+    return { donation, claim, people };
   }, id);
 
   useRealtimeRefresh(reload);
@@ -69,8 +80,9 @@ export default function DonationDetail() {
     );
   }
 
-  const { donation, claim, counterpart } = data;
+  const { donation, claim, people } = data;
   const isDonor = me.role === 'donor';
+  const isOrg = me.role === 'org';
   const myClaim = claim?.org_id === me.id;
   const minutesLeft = (effectiveDeadline(donation).getTime() - now.getTime()) / 60_000;
   const open = donation.status === 'available' || donation.status === 'claimed';
@@ -90,27 +102,28 @@ export default function DonationDetail() {
         {open ? <Body muted>{formatTimeLeft(minutesLeft)} left before it is no longer safe to collect</Body> : null}
         {donation.address ? <Body>Pickup: {donation.address}</Body> : null}
 
-        {counterpart ? (
-          <Card>
-            <Body muted>{isDonor ? 'Claimed by' : 'Donor'}</Body>
-            <Body>{counterpart.name}</Body>
-            {counterpart.phone ? (
+        {people.map(({ label, profile }) => (
+          <Card key={label}>
+            <Body muted>{label}</Body>
+            <Body>{profile.name}</Body>
+            {profile.address ? <Body muted>{profile.address}</Body> : null}
+            {profile.phone ? (
               <Button
-                label={`Call ${counterpart.phone}`}
+                label={`Call ${profile.phone}`}
                 variant="secondary"
-                onPress={() => Linking.openURL(`tel:${counterpart.phone}`)}
+                onPress={() => Linking.openURL(`tel:${profile.phone}`)}
               />
             ) : null}
           </Card>
-        ) : null}
+        ))}
 
         <ErrorText message={actionError ?? error} />
 
-        {!isDonor && donation.status === 'available' ? (
+        {isOrg && donation.status === 'available' ? (
           <Button label="Claim this food" loading={busy} onPress={() => run(() => claimDonation(donation.id))} />
         ) : null}
 
-        {!isDonor && myClaim && donation.status === 'claimed' ? (
+        {isOrg && myClaim && donation.status === 'claimed' ? (
           <>
             <Button label="Mark as picked up" loading={busy} onPress={() => run(() => markPickedUp(donation.id))} />
             <Button

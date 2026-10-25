@@ -5,10 +5,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { Body, Button, Chip, ErrorText, Field, Screen, Title } from '@/components/ui';
 import { signUp } from '@/lib/api';
 import { geocodeAddress } from '@/lib/location';
-import type { Role } from '@/types';
+import type { SignupRole } from '@/types';
 
 export default function Signup() {
-  const [role, setRole] = useState<Role>('donor');
+  const [role, setRole] = useState<SignupRole>('donor');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
