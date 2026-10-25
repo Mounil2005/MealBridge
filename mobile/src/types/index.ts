@@ -7,6 +7,7 @@ export interface Profile {
   role: Role;
   name: string;
   phone: string | null;
+  address: string | null;
   lat: number | null;
   lng: number | null;
   capacity: number;

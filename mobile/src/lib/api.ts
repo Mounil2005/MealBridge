@@ -14,11 +14,18 @@ function check(res: { error: { message: string } | null }): void {
 
 // ---- auth -----------------------------------------------------------------
 
-export async function signUp(input: { email: string; password: string; name: string; role: Role }) {
+export async function signUp(input: {
+  email: string;
+  password: string;
+  name: string;
+  role: Role;
+  place?: { address: string; lat: number; lng: number };
+}) {
   const { data, error } = await supabase.auth.signUp({
     email: input.email.trim(),
     password: input.password,
-    options: { data: { name: input.name.trim(), role: input.role } },
+    // The database trigger copies these into the new profile row.
+    options: { data: { name: input.name.trim(), role: input.role, ...input.place } },
   });
   if (error) throw new Error(error.message);
   // With email confirmation enabled in Supabase there is no session until the user confirms.
@@ -42,7 +49,7 @@ export async function getProfile(id: string): Promise<Profile> {
 }
 
 export type ProfilePatch = Partial<
-  Pick<Profile, 'name' | 'phone' | 'lat' | 'lng' | 'capacity' | 'max_radius_km'>
+  Pick<Profile, 'name' | 'phone' | 'address' | 'lat' | 'lng' | 'capacity' | 'max_radius_km'>
 >;
 
 export async function updateProfile(id: string, patch: ProfilePatch): Promise<Profile> {

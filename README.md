@@ -56,7 +56,7 @@ All rules are enforced in the database, not the app (see [`supabase/migrations/0
 
 **Prerequisites:** Node 20+ and a free [Supabase](https://supabase.com) project. Install the Expo Go app on your phone.
 
-1. **Database.** In the Supabase dashboard open *SQL Editor*, paste the contents of `supabase/migrations/0001_init.sql`, and run it.
+1. **Database.** In the Supabase dashboard open *SQL Editor*, then run each file in `supabase/migrations/` in order (`0001_init.sql`, then `0002_profile_address.sql`).
 2. **Auth settings (development).** *Authentication -> Providers -> Email*: turn off "Confirm email" so signup logs you straight in.
 3. **Configure the app.**
    ```bash

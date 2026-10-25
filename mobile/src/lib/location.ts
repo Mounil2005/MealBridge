@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 
 export interface Coords {
   lat: number;
@@ -32,8 +33,8 @@ export async function getCurrentCoords(): Promise<Coords> {
 
 /** Looks up coordinates for a typed address (used when the donor does not share GPS). */
 export async function geocodeAddress(address: string): Promise<Coords> {
-  // Android requires location permission before geocoding; iOS ignores it.
-  await Location.requestForegroundPermissionsAsync();
+  // Android requires location permission before geocoding; iOS does not.
+  if (Platform.OS === 'android') await Location.requestForegroundPermissionsAsync();
   let point: Location.LocationGeocodedLocation | undefined;
   try {
     [point] = await Location.geocodeAsync(address);

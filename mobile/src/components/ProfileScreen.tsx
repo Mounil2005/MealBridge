@@ -4,7 +4,7 @@ import { ScrollView } from 'react-native';
 import { Body, Button, ErrorText, Field, Screen, Title } from './ui';
 import { signOut, updateProfile } from '@/lib/api';
 import { useAuth, useProfile } from '@/lib/auth';
-import { getCurrentCoords } from '@/lib/location';
+import { geocodeAddress, getCurrentCoords } from '@/lib/location';
 
 export default function ProfileScreen() {
   const profile = useProfile();
@@ -13,6 +13,7 @@ export default function ProfileScreen() {
 
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone ?? '');
+  const [address, setAddress] = useState(profile.address ?? '');
   const [capacity, setCapacity] = useState(String(profile.capacity));
   const [radius, setRadius] = useState(String(profile.max_radius_km));
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +36,18 @@ export default function ProfileScreen() {
     setError(null);
     setSaved(false);
     try {
+      // A changed address is re-located so matching always uses the address shown here.
+      const trimmed = address.trim();
+      let place: { address: string; lat: number; lng: number } | null = null;
+      if (trimmed && trimmed !== (profile.address ?? '')) {
+        const { lat, lng } = await geocodeAddress(trimmed);
+        place = { address: trimmed, lat, lng };
+      }
       const updated = await updateProfile(profile.id, {
         name: name.trim(),
         phone: phone.trim() || null,
+        ...(place ?? {}),
+        ...(!trimmed ? { address: null } : {}),
         ...(isOrg ? { capacity: capacityNum, max_radius_km: radiusNum } : {}),
       });
       setProfile(updated);
@@ -54,8 +64,10 @@ export default function ProfileScreen() {
     setError(null);
     setSaved(false);
     try {
-      const { lat, lng } = await getCurrentCoords();
-      setProfile(await updateProfile(profile.id, { lat, lng }));
+      const here = await getCurrentCoords();
+      const nextAddress = here.address ?? (address.trim() || null);
+      setProfile(await updateProfile(profile.id, { lat: here.lat, lng: here.lng, address: nextAddress }));
+      setAddress(nextAddress ?? '');
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not get your location');
@@ -76,6 +88,7 @@ export default function ProfileScreen() {
             : 'Donor'}
         </Body>
         <Field label={isOrg ? 'Organization name' : 'Name / business name'} value={name} onChangeText={setName} />
+        <Field label="Address" value={address} onChangeText={setAddress} placeholder="e.g. Saket, South Delhi" />
         <Field label="Phone (shared only with the matched party)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         {isOrg ? (
           <>
